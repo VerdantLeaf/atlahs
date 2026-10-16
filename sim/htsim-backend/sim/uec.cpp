@@ -992,6 +992,15 @@ void UecSink::receivePacket(Packet &pkt) {
 
     int size = p->data_packet_size();
     p->free();
+    {   // Optional per-packet receive log: set RXHOST=<host id> (and RXLOG=<file>, default rx_packets.csv)
+        // to write `time_ps,payload,src` for every data packet delivered to that host.
+        static FILE *rxlog = NULL; static int rxhost = -2;
+        if (rxhost == -2) {
+            const char *h = getenv("RXHOST"); rxhost = h ? atoi(h) : -1;
+            if (rxhost >= 0) { const char *f = getenv("RXLOG"); rxlog = fopen(f ? f : "rx_packets.csv", "w"); if (rxlog) fprintf(rxlog, "time_ps,payload,src\n"); }
+        }
+        if (rxlog && (int)to_sink == rxhost && _src) fprintf(rxlog, "%lu,%d,%d\n", (unsigned long)_src->eventlist().now(), size, (int)from_sink);
+    }
 
     _packets += size;
 
